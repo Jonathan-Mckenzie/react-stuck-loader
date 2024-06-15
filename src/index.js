@@ -6,9 +6,10 @@ import reportWebVitals from './reportWebVitals';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
+  <>
+  {/* tune this so that the sync version takes about 5 seconds  */}
+    <App n={600000000}/>
+  </>
 );
 
 // If you want to start measuring performance in your app, pass a function
