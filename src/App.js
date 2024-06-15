@@ -5,12 +5,15 @@ import {Child} from './Child';
 import { TransformSync, TransformAsync } from './Transform';
 import Clicker from './Clicker';
 
+import worker from './Transform.worker.js';
+import WebWorker from './WebWorker';
 
 function App({n}) {
 
   const [data, setData] = useState([]);
   const [isLoading, setLoading] = useState(false);
   const [useAsync, setAsync] = useState(false);
+  const [useWorker, setUserWorker] = useState(false);
 
   const [reloadCount, setReloadCount] = useState(0);
 
@@ -25,28 +28,49 @@ function App({n}) {
     }
 
     setLoading(true);
-    console.log('fetching data...')
+    console.log('fetching data...');
 
     setTimeout(async () => {
       const startTime = performance.now();
       let data = []
-      if (useAsync) {
+
+      const postData = (data) => {
+        const endTime = performance.now();
+        data.push(Math.trunc(endTime-startTime)+' ms');
+        setLoading(false);
+        setData(data);
+        console.log('data fetched');
+      }
+
+      if (useWorker) {
+        const webWorker = new WebWorker(worker);
+        const handleMessage = (event) => {
+          console.log('Received result from worker:', event);
+          postData(data);
+          webWorker.removeEventListener('message', handleMessage);
+          webWorker.terminate();
+        }
+        webWorker.addEventListener('message', handleMessage);
+        webWorker.postMessage({ n });
+      } else if (useAsync) {
         data = await TransformAsync(n)
+        postData(data);
       } else {
         data = await TransformSync(n)
+        postData(data);
       }
-      const endTime = performance.now();
-      data.push(Math.trunc(endTime-startTime)+' ms');
 
-      setLoading(false);
-      setData(data);
-      console.log('data fetched')
+
     }, 300);
   }, [reloadCount]);
 
   const toggleAsyncSync = () => {
     setAsync(!useAsync);
   };
+
+  const toggleUseWorker = () => {
+    setUserWorker(!useWorker);
+  }
 
   const updateCount = () => {
     setReloadCount(reloadCount + 1);
@@ -72,6 +96,11 @@ function App({n}) {
         <div style={{marginTop: '2rem'}}>
           Use Async?
           <input type="checkbox" checked={useAsync} onChange={toggleAsyncSync} />
+        </div>
+
+        <div style={{marginTop: '2rem'}}>
+          Use Worker?
+          <input type="checkbox" checked={useWorker} onChange={toggleUseWorker} />
         </div>
       
       </header>
